@@ -3,11 +3,13 @@ package org.example.medico_norelacional.DAO;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Updates;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.example.medico_norelacional.ConnectionDB;
 import org.example.medico_norelacional.Model.Cita;
 
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,4 +44,32 @@ public class CitaDAO {
         }
         return listaCitas;
     }
+
+    public void insertNuevaCita(ObjectId pacienteId, String especialidad, LocalDate fecha) {
+        Document doc = new Document("numeroCita", generarNumeroCita(pacienteId))
+                .append("paciente_id", pacienteId)
+                .append("fechaCita", fecha.atStartOfDay())
+                .append("especialidad", especialidad);
+        citasCollection.insertOne(doc);
+    }
+
+    private int generarNumeroCita(ObjectId pacienteId) {
+        // cuenta las citas que tiene el paciente y suma 1
+        return (int) citasCollection.countDocuments(Filters.eq("paciente_id", pacienteId)) + 1;
+    }
+
+    public void deleteCita(ObjectId citaId) {
+        citasCollection.deleteOne(Filters.eq("_id", citaId));
+    }
+
+    public void updateCita(ObjectId citaId, String especialidad, LocalDate fecha) {
+        citasCollection.updateOne(
+                Filters.eq("_id", citaId),
+                Updates.combine(
+                        Updates.set("especialidad", especialidad),
+                        Updates.set("fechaCita", fecha.atStartOfDay())
+                )
+        );
+    }
+
 }

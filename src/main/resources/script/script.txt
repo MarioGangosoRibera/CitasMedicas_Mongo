@@ -1,0 +1,77 @@
+// ===========================
+// Crear colección de especialidades
+// ===========================
+db.especialidades.drop();
+db.especialidades.insertMany([
+  { "nombre": "Traumatología" },
+  { "nombre": "Cardiología" },
+  { "nombre": "Medico de familia" },
+  { "nombre": "Neumología" },
+  { "nombre": "Psiquiatría" },
+  { "nombre": "Cirugia" },
+  { "nombre": "Dermatología" }
+]);
+
+// Crear pacientes
+db.pacientes.drop();
+const paciente1 = db.pacientes.insertOne({
+  "email": "juan.perez@example.com",
+  "password": "1234",
+  "nombre": "Juan Pérez García",
+  "dni": "12345678A",
+  "direccion": "Calle Mayor 12, Madrid",
+  "telefono": "654123789",
+  "citas": []
+}).insertedId;
+
+const paciente2 = db.pacientes.insertOne({
+  "email": "maria.lopez@example.com",
+  "password": "abcd",
+  "nombre": "María López Fernández",
+  "dni": "87654321B",
+  "direccion": "Avenida Central 45, Sevilla",
+  "telefono": "622987654",
+  "citas": []
+}).insertedId;
+
+// Crear citas
+db.citas.drop();
+const cita1 = db.citas.insertOne({
+  "numeroCita": 1,
+  "paciente_id": paciente1,
+  "fechaCita": ISODate("2025-11-12T10:30:00"),
+  "especialidad": "Traumatología"
+}).insertedId;
+
+const cita2 = db.citas.insertOne({
+  "numeroCita": 2,
+  "paciente_id": paciente1,
+  "fechaCita": ISODate("2025-12-01T09:00:00"),
+  "especialidad": "Cardiología"
+}).insertedId;
+
+const cita3 = db.citas.insertOne({
+  "numeroCita": 1,
+  "paciente_id": paciente2,
+  "fechaCita": ISODate("2025-11-20T11:00:00"),
+  "especialidad": "Dermatología"
+}).insertedId;
+
+// Asociar citas a pacientes
+db.pacientes.updateOne(
+  { _id: paciente1 },
+  { $push: { citas: { $each: [ cita1, cita2 ] } } }
+);
+
+db.pacientes.updateOne(
+  { _id: paciente2 },
+  { $push: { citas: { $each: [ cita3 ] } } }
+);
+
+// Verificar datos
+print("\n✅ Especialidades:");
+printjson(db.especialidades.find().toArray());
+print("\n✅ Pacientes:");
+printjson(db.pacientes.find().toArray());
+print("\n✅ Citas:");
+printjson(db.citas.find().toArray());

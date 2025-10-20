@@ -1,16 +1,21 @@
 package org.example.medico_norelacional.Controller;
 
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import org.example.medico_norelacional.ConnectionDB;
 import org.example.medico_norelacional.DAO.CitaDAO;
 import org.example.medico_norelacional.Model.Cita;
 import org.example.medico_norelacional.Model.Paciente;
 
+import org.bson.Document;
 import java.net.URL;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -39,7 +44,7 @@ public class CitasController implements Initializable {
     private TextField txtDireccion;
 
     @FXML
-    private ComboBox<?> txtEspecialidad;
+    private ComboBox<String> txtEspecialidad;
 
     @FXML
     private TextField txtNCita;
@@ -59,7 +64,7 @@ public class CitasController implements Initializable {
     }
 
     private void cargarDatosPaciente() {
-        if (pacienteActual == null) {
+        if (pacienteActual != null) {
             txtDNI.setText(pacienteActual.getDni());
             txtNombre.setText(pacienteActual.getNombre());
             txtDireccion.setText(pacienteActual.getDireccion());
@@ -70,6 +75,23 @@ public class CitasController implements Initializable {
             txtNombre.setEditable(false);
             txtTelefono.setEditable(false);
             txtDireccion.setEditable(false);
+        }
+    }
+
+    private void cargarEspecialidades() {
+        try {
+            MongoCollection<Document> col = ConnectionDB.getDatabase().getCollection("especialidades");
+            try (MongoCursor<Document> cursor = col.find().iterator()) {
+                while (cursor.hasNext()) {
+                    Document doc = cursor.next();
+                    String nombre = doc.getString("nombre");
+                    if (nombre != null) {
+                        txtEspecialidad.getItems().add(nombre);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -94,17 +116,48 @@ public class CitasController implements Initializable {
 
     @FXML
     void onClickBorrar(ActionEvent event) {
-
+        Cita citaSeleccionada = tableview.getSelectionModel().getSelectedItem();
+        if (citaSeleccionada != null){
+            citaDAO.deleteCita(citaSeleccionada.getId());
+            onClickVerCitas(null);
+        }else {
+            System.out.println("No hay cita seleccionada");
+        }
     }
 
     @FXML
     void onClickModificar(ActionEvent event) {
+        Cita citaSeleccionada = tableview.getSelectionModel().getSelectedItem();
+        if (citaSeleccionada != null) {
+            String nuevaEspecialidad = txtEspecialidad.getValue();
+            LocalDate nuevaFecha = datePicker.getValue();
 
+            if (nuevaEspecialidad == null || nuevaFecha == null) {
+                System.out.println("Seleccione nueva fecha y/o especialidad");
+                return;
+            }
+
+            citaDAO.updateCita(citaSeleccionada.getId(), nuevaEspecialidad, nuevaFecha);
+            onClickVerCitas(null);
+        } else {
+            System.out.println("No hay cita seleccionada");
+        }
     }
+
 
     @FXML
     void onClickNueva(ActionEvent event) {
+        if (pacienteActual == null){
+            return;
+        }
+        String especialidad = txtEspecialidad.getValue();
+        if (especialidad == null || datePicker.getValue() == null){
+            System.out.println("Debes seleccionar fecha y especialidad");
+            return;
+        }
 
+        citaDAO.insertNuevaCita(pacienteActual.getId(), especialidad, datePicker.getValue());
+        onClickVerCitas(null);
     }
 
     @Override
@@ -142,5 +195,7 @@ public class CitasController implements Initializable {
 
         // Establecer un mensaje por defecto para la tabla vacía
         tableview.setPlaceholder(new Label("Tabla sin contenido. Pulse 'Ver citas Paciente' para cargar."));
+
+        cargarEspecialidades();
     }
 }
